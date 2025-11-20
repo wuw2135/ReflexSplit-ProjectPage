@@ -1,1 +1,898 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="ReflexSplit: Single Image Reflection Separation via Layer Fusion-Separation.">
+  <meta name="keywords" content="ReflexSplit, Single Image Reflection Separation">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReflexSplit: Single Image Reflection Separation via Layer Fusion-Separation</title>
 
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PYVRSFMDRL"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PYVRSFMDRL');
+  </script>
+
+  <style>
+    img-comparison-slider img {
+      height: 200px;
+      object-fit: cover;
+    }
+
+    img-comparison-slider {
+      --divider-width: 2px;
+      --divider-color: #535353;
+      --default-handle-opacity: 0.3;
+    }
+
+    .toggle-switch {
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      user-select: none;
+      border: 1px solid #bbb;
+      transition: all 0.2s;
+    }
+
+    .toggle-switch:hover {
+      background: #dddddc;
+    }
+
+    /* 新增：Transmission / Reflection 切換的樣式 */
+    .mode-toggle {
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      user-select: none;
+      border: 1px solid #bbb;
+      transition: all 0.2s;
+    }
+
+    .mode-toggle:hover {
+      background: #dddddc;
+    }
+
+    .comparison-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    /* label 共用樣式 */
+    .comparison-label {
+      position: absolute;
+      bottom: 6px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      pointer-events: none;
+    }
+
+    .before-label {
+      left: 6px;
+    }
+
+    .after-label {
+      right: 6px;
+    }
+
+    .case-thumb-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .case-thumb {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      cursor: pointer;
+      border-radius: 4px;
+      border: 2px solid transparent;
+      transition: 0.2s;
+      box-sizing: border-box;
+    }
+
+    .case-thumb.is-active {
+      border-color: #3273dc;
+    }
+
+    .model-title {
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    /* 第二段 Comparison 自己用的 label（避免跟上面那段衝突） */
+    .comp-before-label {
+      left: 6px;
+    }
+
+    .comp-after-label {
+      right: 6px;
+    }
+
+    .fixed-width-block {
+      max-width: 1250px;   /* 跟你圖一樣寬 */
+      margin: 0 auto;      /* 置中 */
+    }
+
+
+
+  </style>
+
+
+
+
+
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+  <link rel="stylesheet" href="./assets/css/bulma.min.css">
+  <link rel="stylesheet" href="./assets/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./assets/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./assets/css/fontawesome.all.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./assets/css/index.css">
+  <link rel="icon" href="./assets/images/ReflexSplit_icon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/img-comparison-slider@8/dist/styles.css"/>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./assets/js/fontawesome.all.min.js"></script>
+  <script src="./assets/js/bulma-carousel.min.js"></script>
+  <script src="./assets/js/bulma-slider.min.js"></script>
+  <script src="./assets/js/index.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/img-comparison-slider@8/dist/index.js"></script>
+</head>
+
+
+
+<body>
+
+<nav class="navbar" role="navigation" aria-label="main navigation">
+  <div class="navbar-brand">
+    <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+    </a>
+  </div>
+  <div class="navbar-menu">
+    <div class="navbar-start" style="flex-grow: 1; justify-content: center;">
+      <a class="navbar-item" href="https://ming053l.github.io/">
+      <span class="icon">
+          <i class="fas fa-home"></i>
+      </span>
+      </a>
+
+      <div class="navbar-item has-dropdown is-hoverable">
+        <a class="navbar-link">
+          More Research
+        </a>
+        <div class="navbar-dropdown">
+          <a class="navbar-item" href="https://ming053l.github.io/PhaSR/">
+            PhaSR
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</nav>
+
+
+<section class="hero">
+  <div class="hero-body">
+    <div class="container ">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="title is-1 publication-title">
+            <img src="./assets/images/ReflexSplit_icon.png" alt="ReflexSplit Icon" class="title-icon">
+            ReflexSplit: Single Image Reflection Separation via Layer Fusion-Separation
+          </h1>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              <a href="https://ming053l.github.io/">Chia-Ming Lee</a><sup>1,2</sup>,</span>
+            <span class="author-block">
+              <a href="https://vanlinlin.github.io/">Yu-Fan Lin</a><sup>2</sup>
+            <span class="author-block">
+              <a href="https://github.com/wuw2135">Jin-Hui Jiang</a><sup>1</sup>
+            <span class="author-block">
+              <a href="https://github.com/yujouhsiao">Yu-Jou Hsiao</a><sup>2</sup>
+            <span class="author-block">
+              <a href="https://cchsu.info/">Chih-Chung Hsu</a><sup>1,2</sup>
+            <span class="author-block">
+              <a href="https://yulunalexliu.github.io/">Yu-Lun Liu</a><sup>1</sup>
+            </span>
+          </div>
+
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup>1</sup>National Yang Ming Chiao Tung University,</span>
+            <span class="author-block"><sup>2</sup>National Cheng Kung University</span>
+          </div>
+
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <!-- PDF Link. -->
+              <span class="link-block">
+                <a href="https://arxiv.org/pdf/XXXX.XXXXX"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Paper(coming soon)</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="https://arxiv.org/abs/XXXX.XXXXX"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="ai ai-arxiv"></i>
+                  </span>
+                  <span>arXiv(coming soon)</span>
+                </a>
+              </span>
+              <!-- Code Link. -->
+              <span class="link-block">
+                <a href="https://wuw2135.github.io/ReflexSplit-ProjectPage/"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-github"></i>
+                  </span>
+                  <span>Code(coming soon)</span>
+                  </a>
+              </span>
+              <!-- Dataset Link. -->
+              <span class="link-block">
+                <a href="https://drive.google.com/drive/folders/XXXXX"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="far fa-images"></i>
+                  </span>
+                  <span>Results(coming soon)</span>
+                  </a>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="hero teaser">
+  <div class="container ">
+    <div class="hero-body">
+      <img src="./assets/Reflex_teaser.png" alt="Reflex Teaser">
+        <h2 class="subtitle has-text-centered" style="margin-top: 20px;">
+          <strong>Motivation:</strong> 
+          Both DSIT and RDNet exhibit transmission-reflection confusion with incomplete reflection separation, leading to annoying artifacts or details distortion.
+          <span class="dnerf">ReflexSplit</span> achieves better separation through <strong>explicit fusion-separation</strong> and <strong>multi-scale coordination</strong>.
+        </h2>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="background:#f0eeee !important;">
+  <div class="container ">
+    <!-- Abstract. -->
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            Single Image Reflection Separation (SIRS) disentangles mixed images into transmission and reflection layers. Existing methods suffer from transmission-reflection confusion under nonlinear mixing, particularly in deep decoder layers, due to implicit fusion mechanisms and inadequate multi-scale coordination. 
+          </p>
+          <p>
+            We propose <strong>ReflexSplit</strong>, a dual-stream framework with three key innovations. <strong>(1) Cross scale Gated Fusion (CrGF)</strong> adaptively aggregates semantic priors, texture details, and decoder context across hier archical depths, stabilizing gradient flow and maintaining feature consistency. <strong>(2) Layer Fusion-Separation Blocks (LFSB)</strong> alternate between fusion for shared structure extraction and differential separation for layer-specific disentanglement. Inspired by Differential Transformer, we extend attention cancellation to dual-stream separation via cross-stream subtraction. <strong>(3) Curriculum training</strong> progressively strengthens differential separation through depth dependent initialization and epoch-wise warmup. 
+          </p>
+          <p>
+            Extensive experiments on synthetic and real-world benchmarks demonstrate state-of-the-art performance with superior perceptual quality and robust generalization.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+    
+<section class="section">
+  <div class="columns is-centered has-text-centered">
+    <div class="column is-full">
+      <h2 class="title is-3">Network Architecture</h2>
+
+      <div class="has-text-centered">
+        <img style="width: 1000px;" src="assets/Reflex_arch.png">
+      </div>
+
+      <div class="content has-text-justified mt-4 fixed-width-block">
+        <p>
+          Dual-branch encoders extract hierarchical features: GFEB (Swin Transformer) for global semantics {P<sub>ℓ</sub>} and LFEB (MuGI-based) for local textures {E<sub>ℓ</sub>}. CrGF adaptively aggregates these multi-scale features across decoder depths, while LFSB alternates between fusion (cross-stream complementarity) and differential separation (layer disentanglement) to progressively refine dual streams.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section"  style="background:#f0eeee !important;">
+  <div class="columns is-centered has-text-centered">
+    <div class="column is-full">
+      <h2 class="title is-3">Layer Fusion-Separation Blocks (LFSB)</h2>
+
+      <div class="has-text-centered">
+        <img style="width: 800px;" src="assets/Reflex_DDAIB.jpg">
+      </div>
+
+      <div class="content has-text-justified mt-4 fixed-width-block">
+        <p>
+          LFSB alternates between fusion (shared structure) and separation (layer disentanglement): (1) Bidirectional projection aligns transmission-reflection features; (2) Dual-dimensional attention (SA + CA) models spatial and inter-layer dependencies; (3) Differential operators A<sup>𝑡</sup> − λ<sub>ℓ</sub>A<sup>𝑟</sup> suppress cross-stream interference; (4) FFNs with residuals integrate separated features.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container ">
+    <div class="columns is-centered has-text-centered">
+      <div class="column">
+        <div class="title is-3" style="display:flex; align-items:center; justify-content:center; gap:8px;">
+          Visualization on
+          <span id="mode-toggle" class="mode-toggle">Transmission</span>
+          <span id="before-option-wrapper" class="vis-option">
+            (Use <span id="toggle-before-btn" class="toggle-switch">Input</span> as before)
+          </span>
+        </div>
+
+
+        <!-- 第 1 排 -->
+        <div class="columns is-centered">
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0001.png" src="assets/images/input/0001.png">
+                <img slot="second" class="viz-after-img" data-filename="0001.png" src="assets/images/our/output/0001.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0002.png" src="assets/images/input/0002.png">
+                <img slot="second" class="viz-after-img" data-filename="0002.png" src="assets/images/our/output/0002.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0003.png" src="assets/images/input/0003.png">
+                <img slot="second" class="viz-after-img" data-filename="0003.png" src="assets/images/our/output/0003.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0004.png" src="assets/images/input/0004.png">
+                <img slot="second" class="viz-after-img" data-filename="0004.png" src="assets/images/our/output/0004.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 第 2 排 -->
+        <div class="columns is-centered">
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0005.png" src="assets/images/input/0005.png">
+                <img slot="second" class="viz-after-img" data-filename="0005.png" src="assets/images/our/output/0005.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0006.png" src="assets/images/input/0006.png">
+                <img slot="second" class="viz-after-img" data-filename="0006.png" src="assets/images/our/output/0006.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0007.png" src="assets/images/input/0007.png">
+                <img slot="second" class="viz-after-img" data-filename="0007.png" src="assets/images/our/output/0007.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0008.png" src="assets/images/input/0008.png">
+                <img slot="second" class="viz-after-img" data-filename="0008.png" src="assets/images/our/output/0008.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 第 3 排 -->
+        <div class="columns is-centered">
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0009.png" src="assets/images/input/0009.png">
+                <img slot="second" class="viz-after-img" data-filename="0009.png" src="assets/images/our/output/0009.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0010.png" src="assets/images/input/0010.png">
+                <img slot="second" class="viz-after-img" data-filename="0010.png" src="assets/images/our/output/0010.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0011.png" src="assets/images/input/0011.png">
+                <img slot="second" class="viz-after-img" data-filename="0011.png" src="assets/images/our/output/0011.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+
+          <div class="column">
+            <div class="comparison-wrapper">
+              <img-comparison-slider>
+                <img slot="first" class="viz-before-img" data-filename="0012.png" src="assets/images/input/0012.png">
+                <img slot="second" class="viz-after-img" data-filename="0012.png" src="assets/images/our/output/0012.png">
+              </img-comparison-slider>
+              <div class="comparison-label before-label"></div>
+              <div class="comparison-label after-label"></div>
+            </div>
+          </div>
+        </div>
+
+        
+      
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section"  style="background:#f0eeee !important;">
+  <div class="container ">
+    <div class="columns is-centered has-text-centered">
+      <div class="column">
+        <div class="title is-3" 
+            style="display:flex; align-items:center; justify-content:center; gap:12px;">
+            Qualitative Comparison  
+          (Between: <span id="compare-mode-btn" class="toggle-switch">GT</span>)
+          (Using: <span id="gt-toggle-btn" class="toggle-switch">Transmission</span>)
+        </div>
+
+     
+        <div class="columns is-centered">
+          <div class="column is-narrow">
+            <div class="case-thumb-list">
+              <img class="case-thumb is-active" data-filename="0001.png" src="assets/images/input/0001.png">
+              <img class="case-thumb" data-filename="0002.png" src="assets/images/input/0002.png">
+              <img class="case-thumb" data-filename="0003.png" src="assets/images/input/0003.png">
+              <img class="case-thumb" data-filename="0004.png" src="assets/images/input/0004.png">
+              <img class="case-thumb" data-filename="0005.png" src="assets/images/input/0005.png">
+              <img class="case-thumb" data-filename="0006.png" src="assets/images/input/0006.png">
+              <img class="case-thumb" data-filename="0007.png" src="assets/images/input/0007.png">
+              <img class="case-thumb" data-filename="0008.png" src="assets/images/input/0008.png">
+              <img class="case-thumb" data-filename="0009.png" src="assets/images/input/0009.png">
+              <img class="case-thumb" data-filename="0010.png" src="assets/images/input/0010.png">
+              <img class="case-thumb" data-filename="0011.png" src="assets/images/input/0011.png">
+              <img class="case-thumb" data-filename="0012.png" src="assets/images/input/0012.png">
+            </div>
+          </div>
+        </div>
+
+
+        <div class="columns is-centered">
+
+          <!-- DSRNet -->
+          <div class="column">
+            <p class="model-title">DSRNet</p>
+            <div class="comparison-wrapper"
+                 data-model-name="DSRNet"
+                 data-model-dir="assets/images/dsrnet/output/"
+                 data-ours-dir="assets/images/our/output/">
+              <img-comparison-slider>
+                <img slot="first" class="before-img" src="assets/images/gt/0001.png">
+                <img slot="second" class="after-img"  src="assets/images/dsrnet/output/0001.png">
+              </img-comparison-slider>
+              <div class="comparison-label comp-before-label"></div>
+              <div class="comparison-label comp-after-label"></div>
+            </div>
+          </div>
+
+          <!-- MaxRF -->
+          <div class="column">
+            <p class="model-title">MaxRF</p>
+            <div class="comparison-wrapper"
+                 data-model-name="MaxRF"
+                 data-model-dir="assets/images/maxrf/output/"
+                 data-ours-dir="assets/images/our/output/">
+              <img-comparison-slider>
+                <img slot="first" class="before-img" src="assets/images/gt/0001.png">
+                <img slot="second" class="after-img"  src="assets/images/maxrf/output/0001.png">
+              </img-comparison-slider>
+              <div class="comparison-label comp-before-label"></div>
+              <div class="comparison-label comp-after-label"></div>
+            </div>
+          </div>
+
+          <!-- DSIT -->
+          <div class="column">
+            <p class="model-title">DSIT</p>
+            <div class="comparison-wrapper"
+                 data-model-name="DSIT"
+                 data-model-dir="assets/images/dsit/output/"
+                 data-ours-dir="assets/images/our/output/">
+              <img-comparison-slider>
+                <img slot="first" class="before-img" src="assets/images/gt/0001.png">
+                <img slot="second" class="after-img"  src="assets/images/dsit/output/0001.png">
+              </img-comparison-slider>
+              <div class="comparison-label comp-before-label"></div>
+              <div class="comparison-label comp-after-label"></div>
+            </div>
+          </div>
+
+          <!-- RDNet -->
+          <div class="column">
+            <p class="model-title">RDNet</p>
+            <div class="comparison-wrapper"
+                 data-model-name="RDNet"
+                 data-model-dir="assets/images/rdnet/output/"
+                 data-ours-dir="assets/images/our/output/">
+              <img-comparison-slider>
+                <img slot="first" class="before-img" src="assets/images/gt/0001.png">
+                <img slot="second" class="after-img"  src="assets/images/rdnet/output/0001.png">
+              </img-comparison-slider>
+              <div class="comparison-label comp-before-label"></div>
+              <div class="comparison-label comp-after-label"></div>
+            </div>
+          </div>
+
+          <!-- Ours -->
+          <div class="column">
+            <p class="model-title">Ours</p>
+            <div class="comparison-wrapper"
+                 data-model-name="Ours"
+                 data-model-dir="assets/images/our/output/"
+                 data-ours-dir="assets/images/our/output/">
+              <img-comparison-slider>
+                <img slot="first" class="before-img" src="assets/images/gt/0001.png">
+                <img slot="second" class="after-img"  src="assets/images/our/output/0001.png">
+              </img-comparison-slider>
+              <div class="comparison-label comp-before-label"></div>
+              <div class="comparison-label comp-after-label"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container ">
+    <div class="columns is-centered has-text-centered">
+      <div class="column">
+        <div class="title is-3" 
+            style="display:flex; align-items:center; justify-content:center; gap:12px;">
+            Quantitative Comparison
+        </div>
+        
+        <div class="title is-4">
+          <p>
+            On Real20, Nature, SIR<sup>2</sup>
+          </p>
+        </div>
+        <img src="assets/compare.png">
+        <div class="title is-4">
+          <p>
+            On OpenRR
+          </p>
+        </div>
+        <img src="assets/compare2.jpg" style="width: 500px;">
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+  
+<section class="section" id="BibTeX" style="background:#f0eeee !important;">
+  <div class="container  content">
+    <h2 class="title">BibTeX</h2>
+    <pre><code>@article{lee2025reflexsplit,
+  title={ReflexSplit: Single Image Reflection Separation via Layer Fusion-Separation},
+  author={Chia-Ming Lee, Yu-Fan Lin, Jin-Hui Jiang, Yu-Jou Hsiao, Chih-Chung Hsu, Yu-Lun Liu},
+  journal={arXiv preprint arXiv:XXXX.XXXXX},
+  year={2025}
+}</code></pre>
+  </div>
+</section>
+
+  
+<footer class="footer">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="content has-text-centered">
+        <p>
+          This page is modified from the <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a> template.
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const dirs = {
+      input: "assets/images/input/",
+      output: "assets/images/our/output/",
+      gt: "assets/images/gt/",
+      ref_output: "assets/images/our/ref_output/",
+      ref_gt: "assets/images/reflection_gt/",
+    };
+
+    let useGT = false;          // false = before 用 input, true = before 用 gt
+    let isTransmission = true;  // true = Transmission, false = Reflection
+
+    const btn = document.getElementById("toggle-before-btn");
+    const modeToggle = document.getElementById("mode-toggle");
+    const beforeOptionWrapper = document.getElementById("before-option-wrapper");
+
+    if (!btn || !modeToggle) {
+      console.error("找不到 toggle-before-btn 或 mode-toggle");
+      return;
+    }
+
+
+    function updateImages() {
+      let beforePrefix, afterPrefix;
+
+      if (isTransmission) {
+
+        beforePrefix = useGT ? dirs.gt : dirs.input;
+        afterPrefix = dirs.output;
+      } else {
+
+        beforePrefix = dirs.ref_gt;
+        afterPrefix = dirs.ref_output;
+      }
+
+      document.querySelectorAll(".viz-before-img").forEach(img => {
+        const filename = img.dataset.filename;
+        img.src = beforePrefix + filename;
+      });
+
+      document.querySelectorAll(".viz-after-img").forEach(img => {
+        const filename = img.dataset.filename;
+        img.src = afterPrefix + filename;
+      });
+
+      updateLabels();
+    }
+
+    function updateLabels() {
+      let beforeText, afterText;
+
+      if (isTransmission) {
+        beforeText = useGT ? "GT" : "Input";
+        afterText = "Output";
+      } else {
+        beforeText = "Ref GT";
+        afterText = "Ref Output";
+      }
+
+      document.querySelectorAll(".before-label").forEach(l => l.textContent = beforeText);
+      document.querySelectorAll(".after-label").forEach(l => l.textContent = afterText);
+    }
+
+
+    btn.addEventListener("click", function () {
+      useGT = !useGT;
+      btn.textContent = useGT ? "GT" : "Input";
+
+      if (isTransmission) {
+        updateImages();
+      }
+    });
+
+    modeToggle.addEventListener("click", function () {
+      isTransmission = !isTransmission;
+
+      if (isTransmission) {
+        modeToggle.textContent = "Transmission";
+        beforeOptionWrapper.style.display = "inline";
+      } else {
+        modeToggle.textContent = "Reflection";
+        beforeOptionWrapper.style.display = "none";
+      }
+
+      updateImages();
+    });
+
+
+    updateImages();
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const caseThumbs = document.querySelectorAll('.case-thumb');
+    const comparisonWrappers = document.querySelectorAll(
+      'section .comparison-wrapper[data-model-dir][data-ours-dir]'
+    );
+    const gtToggleBtn = document.getElementById('gt-toggle-btn');
+    const compareModeBtn = document.getElementById('compare-mode-btn');
+  
+    if (!caseThumbs.length || !comparisonWrappers.length || !gtToggleBtn || !compareModeBtn) {
+      return;
+    }
+  
+    let currentFilename = '0001.png';
+    let useRefGT = false;    
+    let compareToGT = true;   
+  
+    function updateComparisonImages() {
+      const gtPrefix = useRefGT
+        ? "assets/images/reflection_gt/"
+        : "assets/images/gt/";
+
+      comparisonWrappers.forEach(wrapper => {
+        const modelName = wrapper.dataset.modelName;
+        const modelDir  = wrapper.dataset.modelDir;
+        const oursDir   = wrapper.dataset.oursDir;
+
+        const beforeImg = wrapper.querySelector('.before-img');
+        const afterImg  = wrapper.querySelector('.after-img');
+
+        if (!beforeImg || !afterImg) return;
+
+        if (compareToGT) {
+
+          beforeImg.src = gtPrefix + currentFilename;
+
+          if (useRefGT) {
+            if (modelName === "MaxRF") {
+              afterImg.src = "assets/images/no_reflection.png";  
+            } else {
+              const refDir = modelDir.replace("/output/", "/ref_output/");
+              afterImg.src = refDir + currentFilename;
+            }
+          } else {
+            afterImg.src = modelDir + currentFilename;
+          }
+
+        } else {
+          beforeImg.src = modelDir + currentFilename;
+          afterImg.src  = oursDir  + currentFilename;
+        }
+      });
+
+      updateComparisonLabels();
+    }
+
+
+  
+    function updateComparisonLabels() {
+
+      comparisonWrappers.forEach(wrapper => {
+        const beforeLabel = wrapper.querySelector('.comp-before-label');
+        const afterLabel  = wrapper.querySelector('.comp-after-label');
+
+        const modelName = wrapper.dataset.modelName || "Model";
+
+        let beforeText, afterText;
+
+        if (compareToGT) {
+ 
+          beforeText = useRefGT ? "Ref GT" : "GT";
+          afterText  = modelName;
+        } else {
+
+          beforeText = modelName;
+          afterText  = "Ours";
+        }
+
+        beforeLabel.textContent = beforeText;
+        afterLabel.textContent  = afterText;
+      }); 
+    }
+
+    caseThumbs.forEach(thumb => {
+      thumb.addEventListener('click', function () {
+        caseThumbs.forEach(t => t.classList.remove('is-active'));
+        this.classList.add('is-active');
+        currentFilename = this.dataset.filename;
+        updateComparisonImages();
+      });
+    });
+
+    gtToggleBtn.addEventListener('click', function () {
+      useRefGT = !useRefGT;
+      this.textContent = useRefGT ? 'Reflection' : 'Transmission';
+      if (compareToGT) {
+        updateComparisonImages();
+      }
+    });
+  
+
+    compareModeBtn.addEventListener('click', function () {
+      compareToGT = !compareToGT;
+      this.textContent = compareToGT ? 'GT' : 'Model';
+      gtToggleBtn.style.opacity = compareToGT ? '1' : '0.5';
+      updateComparisonImages();
+    });
+  
+
+    updateComparisonImages();
+  });
+  </script>
+  
+
+
+
+
+  
+</body>
+</html>
